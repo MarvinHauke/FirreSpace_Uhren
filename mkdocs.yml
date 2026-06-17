@@ -1,0 +1,19 @@
+site_name: FirreSpace Uhren
+site_description: Arduino-gesteuerte Kunstuhren für FirreSpace 2026
+docs_dir: docs
+
+theme:
+  name: material
+  language: de
+
+nav:
+  - Start: index.md
+  - Hardware:
+    - Übersicht: hardware/index.md
+    - Stückliste: hardware/komponenten.md
+    - Schaltplan: hardware/schaltplan.md
+  - Software:
+    - Übersicht: software/index.md
+    - Firmware: software/firmware.md
+  - Aufbau: aufbau/anleitung.md
+  - Konzept: konzept/index.md

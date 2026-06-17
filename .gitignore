@@ -1,1 +1,22 @@
+# Secrets & local config
+.env
+.claude
 .serena
+
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# MkDocs
+site/
+
+# KiCAD
+hardware/kicad/*-backups/
+hardware/kicad/_autosave-*
+hardware/kicad/*.000
+hardware/kicad/*.bak
+
+# macOS
+.DS_Store
+
