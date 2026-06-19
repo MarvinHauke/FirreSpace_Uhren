@@ -12,6 +12,7 @@ nav:
     - Übersicht: hardware/index.md
     - Stückliste: hardware/komponenten.md
     - Schaltplan: hardware/schaltplan.md
+    - KiCAD Bibliotheken: hardware/kicad-bibliotheken.md
   - Software:
     - Übersicht: software/index.md
     - Firmware: software/firmware.md
