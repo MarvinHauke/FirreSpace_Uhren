@@ -1,57 +1,48 @@
 #include <Arduino.h>
 
-// --- Pins TB6612FNG Motor A (Stundenzeiger) ---
-#define AIN1 4
-#define AIN2 5
-#define PWMA 6
+// Ersetzt den 32.768-kHz-Quarz eines Quarz-Uhrwerks durch ein per Timer1
+// erzeugtes Rechtecksignal mit einstellbarer Frequenz. Der Uhrwerk-IC selbst
+// bleibt verbaut und zählt die Pulse wie gewohnt herunter — er läuft nur
+// proportional zur eingespeisten Frequenz schneller/langsamer. Pin 9 (OC1A)
+// verbindet sich mit dem Oszillatoreingang des Uhrwerk-ICs; der Quarz wird
+// dafür abgeklemmt/entfernt. Kein TB6612FNG, kein H-Brücken-Ansteuern.
+#define OSC_OUT_PIN 9 // OC1A
 
-// --- Pins TB6612FNG Motor B (Minutenzeiger) ---
-#define BIN1 7
-#define BIN2 8
-#define PWMB 9
+const double NOMINAL_FREQ_HZ = 32768.0;
+float speedFactorA = 2.4f; // 1.0 = normale Geschwindigkeit
 
-#define STBY 3
-
-// --- Geschwindigkeitskonstanten (0–255) ---
-// Beide Werte unabhängig voneinander einstellbar → unterschiedliche
-// Zeigergeschwindigkeiten
-float SPEED_FACTOR_A = 0.2f; // Stundenzeiger (langsamer)
-float SPEED_FACTOR_B = 0.2f; // Minutenzeiger (schneller)
-
-uint8_t pwmA() { return (uint8_t)(255 * SPEED_FACTOR_A); }
-uint8_t pwmB() { return (uint8_t)(255 * SPEED_FACTOR_B); }
-
-void motorForward(uint8_t in1, uint8_t in2, uint8_t pwmPin, uint8_t speed) {
-  digitalWrite(in1, HIGH);
-  digitalWrite(in2, LOW);
-  analogWrite(pwmPin, speed);
+void setOscillatorFrequency(double freqHz) {
+  // Timer1 Toggle-Modus: f_out = F_CPU / (2 * prescaler * (1 + OCR1A)),
+  // Prescaler = 1
+  double ocr = (F_CPU / (2.0 * freqHz)) - 1.0;
+  if (ocr < 1.0)
+    ocr = 1.0;
+  if (ocr > 65535.0)
+    ocr = 65535.0;
+  OCR1A = (uint16_t)(ocr + 0.5);
 }
 
 void setup() {
-  pinMode(AIN1, OUTPUT);
-  pinMode(AIN2, OUTPUT);
-  pinMode(PWMA, OUTPUT);
-  pinMode(BIN1, OUTPUT);
-  pinMode(BIN2, OUTPUT);
-  pinMode(PWMB, OUTPUT);
-  pinMode(STBY, OUTPUT);
-  digitalWrite(STBY, HIGH);
+  pinMode(OSC_OUT_PIN, OUTPUT);
+
+  // Timer1: CTC-Modus (WGM12), Toggle von OC1A bei Compare Match (COM1A0),
+  // Prescaler = 1 (CS10)
+  TCCR1A = (1 << COM1A0);
+  TCCR1B = (1 << WGM12) | (1 << CS10);
+  setOscillatorFrequency(NOMINAL_FREQ_HZ * speedFactorA);
 
   Serial.begin(9600);
 }
 
 void loop() {
-  // Geschwindigkeit optional per Serial anpassen: "A0.4" setzt SPEED_FACTOR_A
-  // auf 0.4
+  // Geschwindigkeit per Serial anpassen: "A1.5" setzt das Uhrwerk auf das
+  // 1.5-fache der normalen Geschwindigkeit
   if (Serial.available()) {
     char motor = Serial.read();
     float val = Serial.parseFloat();
-    if (motor == 'A')
-      SPEED_FACTOR_A = constrain(val, 0.0f, 1.0f);
-    if (motor == 'B')
-      SPEED_FACTOR_B = constrain(val, 0.0f, 1.0f);
+    if (motor == 'A' && val > 0.0f) {
+      speedFactorA = val;
+      setOscillatorFrequency(NOMINAL_FREQ_HZ * speedFactorA);
+    }
   }
-
-  motorForward(AIN1, AIN2, PWMA, pwmA());
-  motorForward(BIN1, BIN2, PWMB, pwmB());
 }
